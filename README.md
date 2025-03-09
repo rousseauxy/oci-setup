@@ -143,12 +143,43 @@ We also give the container a name, a restart policy and link 2 volumes. The one 
 
 The final line is the image name and tag. At the time of writing 2.9.3 was the latest version of Portainer container. If this image doesn't already exist on the local machine, Docker will go ahead and download it for you.
 
+~~
 ```
 docker run -d -p 8000:8000 -p 9443:9443 --name portainer \
     --restart=always \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v portainer_data:/data \
     portainer/portainer-ce:latest
+```
+~~
+
+Composer-file for portainer running with traefik
+```
+services:
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    restart: unless-stopped
+    networks:
+      - proxy
+    ports:
+      - 9443
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /appdata/portainer:/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nginx.rule=Host(`portainer.example.com`)"
+      - "traefik.http.routers.nginx.entrypoints=https"
+      - "traefik.http.routers.nginx.tls=true"
+      - "traefik.http.routers.nginx.tls.certresolver=caresolver"
+      - "traefik.http.services.nginx.loadbalancer.server.port=9443"
+    networks:
+      - proxy
+
+networks:
+  proxy:
+    external: true
 ```
 
 When this has completed the installation, we should be able to list the containers in our Docker instance and see our Portainer container running:
