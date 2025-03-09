@@ -131,19 +131,14 @@ If everything worked, then you can go to the public ip of your vm on 8080 port, 
 
 ## Portainer
 ### Installing Portainer
+
 Firstly, we need to install a volume for our Portainer data. Because Docker containers are self-contained, when we tear down our container, we also lose any data stored within the container. To prevent data loss, we use Docker to create volumes, which are basically storage areas on the host machine that are mapped into a container, so that when the container is destroyed, the volume and data stored within it are retained. This is useful for when we're upgrading or redeploying containers, and can re-map the volume to the new container without data loss.
 
 ```
 docker volume create portainer_data
 ```
 
-We can then tell Docker to run the Portainer container. In the command below, we provide port mappings which tell Docker to expose port 8000 from within the container to port 9443 on the host machine. Remember, we allowed access to 9443 when we configured the virtual machine firewall earlier.
-
-We also give the container a name, a restart policy and link 2 volumes. The one we just created above, and the docker socket. This allows Portainer to execute Docker commands to allow it to manage Docker for us.
-
-The final line is the image name and tag. At the time of writing 2.9.3 was the latest version of Portainer container. If this image doesn't already exist on the local machine, Docker will go ahead and download it for you.
-
-~~
+This would allow us to run portainer as described by the docs, but we want it to run with traefik, so we're gonna create a compose-file instead
 ```
 docker run -d -p 8000:8000 -p 9443:9443 --name portainer \
     --restart=always \
@@ -151,7 +146,6 @@ docker run -d -p 8000:8000 -p 9443:9443 --name portainer \
     -v portainer_data:/data \
     portainer/portainer-ce:latest
 ```
-~~
 
 Composer-file for portainer running with traefik
 ```
