@@ -176,6 +176,21 @@ networks:
     external: true
 ```
 
+Here comes the fun part, we will configure the compose file so that it can communicate with the traefik and expose the service with traefik and invoke the TLS cert through traefik caresolver.
+
+So, how other docker services communicate with traefik is through these labels, we assign these labels within the docker compose file and traefik pick up from there. Let me explain all these labels,
+
+* “traefik.enable=true”, here we are labelling that it will use traefik for reverse proxy.
+* “traefik.http.routers.nginx.rule=Host(`nginx.demo.example.com`)”, here we are setting up a router that named nginx and add rule for host dns of nginx.demo.example.com, this can be any domain A record that you use and pointed to the vm’s public ip.
+* “traefik.http.routers.nginx.entrypoints=https”, here we are telling that router to use entrypoint named https , this entrypoint name is configured on traefik.yml file.
+* “traefik.http.routers.nginx.tls=true” &
+* “traefik.http.routers.nginx.tls.certresolver=caresolver”, here these 2 are interconnected, it tells traefik to enable tls and use caresolveras certificate resolver for invoking TLS cert.
+* And lastly, “traefik.http.services.nginx.loadbalancer.server.port=8080”, this tells the traefik that this service is exposed at port 8080 so you can reverse proxy to that port.
+
+Now with this config, we will run this container with docker compose,
+```
+docker compose -f docker-compose.nginx-demo.yaml up -d
+```
 When this has completed the installation, we should be able to list the containers in our Docker instance and see our Portainer container running:
 
 ```
