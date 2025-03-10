@@ -1,0 +1,74 @@
+services:
+  umami:
+    # since we're only ever going to have one instance of this container, we give it a static name.
+    container_name: umami
+    image: ghcr.io/umami-software/umami:postgresql-latest
+    # `default` network for this stack only allows communication between umami and db containers.
+    networks:
+      - t3_proxy
+      - default
+    # we don't bind an external port b/c traefik handles routing to the container;
+    #   expose tells Traefik which port on the container to route traffic to.
+    expose:
+      - 3000
+    environment:
+      # `DATABASE_URL` is a prisma connection string.
+      # this database URL must match the `POSTGRES_DB`, `POSTGRES_USER`, and `POSTGRES_PASSWORD` environment variables defined on the db container.
+      # 5432 is the default port for PostgreSQL.
+      DATABASE_URL: postgresql://umami:umami@db:5432/umami
+      DATABASE_TYPE: postgresql
+      # `APP_SECRET` must contain a random string that you come up with. It's used to generate unique values.
+      #    In older versions of Umami, this variable was called `HASH_SALT`.
+      # You can run the terminal command `openssl rand -base64 32` to generate a 32-character random string.
+      APP_SECRET: <your random string here>
+      # `COLLECT_API_ENDPOINT` and `TRACKER_SCRIPT_NAME` help evade ad blockers.
+      # Generic names are less likely to be blocked.
+      # see https://umami.is/docs/environment-variables and https://umami.is/docs/bypass-ad-blockers for more info.
+      # `COLLECT_API_ENDPOINT` renames the endpoint that scripts send data to from `/api/send` to COLLECT_API_ENDPOINT. Will be appended to analytics dashboard URL.
+      COLLECT_API_ENDPOINT: /api/get
+      # `TRACKER_SCRIPT_NAME` renames the tracker script from `umami.js` to TRACKER_SCRIPT_NAME. Should include `.js` extension.
+      TRACKER_SCRIPT_NAME: fetch.js
+    # TRAEFIK LABELS
+    labels:
+      traefik.enable: "true"
+      # SUBDOMAIN IS DEFINED HERE. You can use any subdomain that's not already in use.
+      # As mentioned above, generic names are less likely to be blocked by ad blockers.
+      # replace YOUR_DOMAIN.TLD with your actual domain!
+      traefik.http.routers.umami.rule: "Host(`analytics.$DOMAINNAME_HS`)"
+      # You should have a global HTTP => HTTPS redirect enabled in your Traefik configuration.
+      # See tip below for notes on setting up Traefik.
+      traefik.http.routers.umami.entrypoints: "websecure"
+      # I have a compression middleware set up; otherwise the tracker script is not compressed.
+      # See tip below for notes on setting up Traefik.
+      traefik.http.routers.umami.middlewares: "compress-gzip@file"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: always
+    # umami ships with a `/api/heartbeat` endpoint,
+    #   which returns a 200 status code if the service is healthy.
+    #   this command will be run by the docker daemon within the container's own context.
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/heartbeat"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  db:
+    image: postgres:15-alpine
+    # `default` network, for communication within this compose stack only.
+    networks:
+      - default
+    environment:
+      # these environment variables must be kept in sync with the `DATABASE_URL` environment variable defined on the umami container.
+      POSTGRES_DB: umami
+      POSTGRES_USER: umami
+      POSTGRES_PASSWORD: umami
+    volumes:
+      - umami-db-data:/var/lib/postgresql/data
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
