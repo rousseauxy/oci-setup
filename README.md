@@ -1,5 +1,5 @@
 # oci-setup
-This setup follows the same principle of https://www.simplehomelab.com/docker-media-server-2024/ but adjusted to my VPS setup (Oracle Cloud Instance Free Ampere (ARM) instance)
+This setup follows the same principle of [this setup](https://www.simplehomelab.com/docker-media-server-2024/) but adjusted to my VPS setup (Oracle Cloud Instance Free Ampere (ARM) instance)
 At home i'm using an Intel NUC with Unraid, might switch this in the future, but my current setup is stable, so I don't see the need to change this any time soon.
 
 ## Server setup
