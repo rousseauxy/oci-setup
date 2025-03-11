@@ -19,7 +19,7 @@ sudo apt-get upgrade
 ## Installing Powershell
 I'm a "powershell-guru" at work, so I thought it would be a logical step to add this to my vps to ease the transition to using a linux based environment :)
 
-Apparently there is [an issue(https://mikefrobbins.com/2024/09/26/how-to-install-powershell-7-and-essential-tools-on-linux/)] to install this on an ARM64 system, so we'll be using the following steps to install powershell into the system
+Apparently there is [an issue](https://mikefrobbins.com/2024/09/26/how-to-install-powershell-7-and-essential-tools-on-linux/) to install this on an ARM64 system, so we'll be using the following steps to install powershell into the system
 
 ```
 # Determine the system architecture
