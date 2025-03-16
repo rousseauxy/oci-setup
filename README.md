@@ -1,5 +1,5 @@
 # oci-setup
-This setup follows the same principle of https://www.simplehomelab.com/docker-media-server-2024/ but adjusted to my VPS setup (Oracle Cloud Instance Free Ampere (ARM) instance)
+This setup follows the same principle of [this setup](https://www.simplehomelab.com/docker-media-server-2024/) but adjusted to my VPS setup (Oracle Cloud Instance Free Ampere (ARM) instance)
 At home i'm using an Intel NUC with Unraid, might switch this in the future, but my current setup is stable, so I don't see the need to change this any time soon.
 
 ## Server setup
@@ -19,7 +19,7 @@ sudo apt-get upgrade
 ## Installing Powershell
 I'm a "powershell-guru" at work, so I thought it would be a logical step to add this to my vps to ease the transition to using a linux based environment :)
 
-Apparently there is [an issue(https://mikefrobbins.com/2024/09/26/how-to-install-powershell-7-and-essential-tools-on-linux/)] to install this on an ARM64 system, so we'll be using the following steps to install powershell into the system
+Apparently there is [an issue](https://mikefrobbins.com/2024/09/26/how-to-install-powershell-7-and-essential-tools-on-linux/) to install this on an ARM64 system, so we'll be using the following steps to install powershell into the system
 
 ```
 # Determine the system architecture
