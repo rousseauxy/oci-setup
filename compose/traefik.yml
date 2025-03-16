@@ -1,0 +1,37 @@
+services:
+  traefik:
+    container_name: traefik
+    image: traefik:v3.3
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    networks:
+      t3_proxy:
+        ipv4_address: 192.168.90.254 # You can specify a static IP
+    ports:
+      - '80:80'
+      - '443:443'
+      - '8080:8080'
+    volumes:
+      - ${DOCKERDIR}/appdata/traefik/data:/etc/traefik
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${DOCKERDIR}/appdata/traefik/rules:/rules # Dynamic File Provider directory
+      - ${DOCKERDIR}/appdata/traefik/acme/acme.json:/acme.json # Certs File 
+      - ${DOCKERDIR}/logs/traefik:/logs # Traefik logs
+    environment:
+      - TZ=${TZ}
+
+    labels:
+      #- "autoheal=true"
+      - "traefik.enable=true"
+      # HTTP Routers
+      - "traefik.http.routers.traefik-rtr.entrypoints=websecure"
+      - "traefik.http.routers.traefik-rtr.rule=Host(`traefik.${DOMAINNAME}`)"
+      # Services - API
+      - "traefik.http.routers.traefik-rtr.service=api@internal"
+      # Healthcheck/ping
+      #- "traefik.http.routers.ping.rule=Host(`traefik.$DOMAINNAME`) && Path(`/ping`)"
+      #- "traefik.http.routers.ping.tls=true"
+      #- "traefik.http.routers.ping.service=ping@internal"
+      # Middlewares
+      - "traefik.http.routers.traefik-rtr.middlewares=chain-authelia@file" # For Authelia Authentication

@@ -1,0 +1,44 @@
+services:
+  # Vaultwarden Password Manager
+  vaultwarden:
+    image: vaultwarden/server:latest
+    container_name: vaultwarden
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    networks:
+      - t3_proxy
+      - default
+    environment:
+        # This is required to allow vaultwarden to verify the TLS certificate!
+      - DOMAIN=https://vault.${DOMAINNAME}
+      - DATABASE_URL=mysql://vaultwarden:vaultwarden@tcp(mariadb:3306)/vaultwarden
+    volumes:
+      - ${DOCKERDIR}/appdata/vaultwarden/data:/data
+    labels:
+    - "traefik.enable=true"
+    ## HTTP Routers
+    - "traefik.http.routers.vaultwarden-rtr.entrypoints=websecure"
+    - "traefik.http.routers.vaultwarden-rtr.rule=Host(`vault.${DOMAINNAME}`)"
+    - "traefik.http.routers.vaultwarden-rtr.tls=true"
+    ## Middlewares
+    - "traefik.http.routers.vaultwarden-rtr.middlewares=chain-no-auth@file"
+    ## HTTP Services
+    - "traefik.http.routers.vaultwarden-rtr.service=vaultwarden-svc"
+    - "traefik.http.services.vaultwarden-svc.loadbalancer.server.port=80"
+  
+  mariadb:
+    image: mariadb:latest
+    container_name: mariadb
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    networks:
+      - default
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: vaultwarden
+      MYSQL_USER: vaultwarden
+      MYSQL_PASSWORD: vaultwarden
+    volumes:
+      - ${DOCKERDIR}/appdata/vaultwarden/db:/var/lib/mysql

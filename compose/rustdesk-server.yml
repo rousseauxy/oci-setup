@@ -1,0 +1,86 @@
+# A minimal configuration to host a RustDesk server with Traefik v3.
+#
+# This configuration is based on a single Rustdesk container hosting the two hbbr and hbbs services
+# instead of running two separate containers as in the official documentation.
+# See https://rustdesk.com/docs/en/self-host/rustdesk-server-oss/docker/ for more information.
+#
+# Pay attention to the comments in the file and adapt the configuration to your needs.
+# Once deployed you must configure the Rustdesk client in the Network tab to use the domain
+# name of the relay server and the port 21117.
+# ID server: DOMAIN_NAME:21116
+# Relay server: DOMAIN_NAME:21117
+# Key: THE_PUBLIC_KEY
+#
+# Note that 21116/udp is causing connections issue with Rustdesk so we
+# directly open the port in the rustdesk container instead of going through Traefik.
+
+  # RustDesk ID/Rendezvous server and Relay server
+  #
+  # This container uses rustdesk-server-s6 instead of rustdesk-server. The difference is that
+  # rustdesk-server-s6 is based on s6-overlay which runs the two services hbbr and hbbs in the same
+  # container.
+  rustdesk:
+    container_name: rustdesk
+    image: ghcr.io/rustdesk/rustdesk-server-s6:latest
+    volumes:
+      - ${DOCKERDIR}/appdata/rustdesk/db:/db
+      - ${DOCKERDIR}/appdata/rustdesk/data:/data
+    restart: unless-stopped
+    environment:
+      - RELAY=rustdesk.${DOMAINNAME}:${RUSTDESK_RELAY_SERVER_PORT}
+      - ENCRYPTED_ONLY=1
+      - DB_URL=/db/db_v2.sqlite3
+      # The private and public keys must be generated with the following command:
+      # Generate the private key: `openssl genpkey -algorithm Ed25519 -out private.key`
+      # Generate the public key: `openssl pkey -in private.key -pubout -out public.key`
+      # Display botk keys and copy them below: `cat private.key public.key`
+      # openssl rsa -in private.pem -pubout -out public.pem
+      - KEY_PRIV=${RUSTDESK_PRIVATE_KEY}
+      - KEY_PUB=${RUSTDESK_PUBLIC_KEY}
+      - RUST_LOG=debug
+    ports:
+      # Rustdesk
+      # Note that 21116/udp is causing connections issue with Rustdesk so we
+      # directly open the port in the rustdesk container instead of going through Traefik.
+      - ${RUSTDESK_ID_SERVER_TCP_PORT}:21116/udp # ID Server - ID registration and heartbeat
+    labels:
+      - traefik.enable=true
+      # 21115/tcp # ID Server - NAT type test
+      - traefik.tcp.routers.rustdesk-rd5.entrypoints=rd5-tcp
+      - traefik.tcp.routers.rustdesk-rd5.rule=HostSNI(`*`)
+      - traefik.tcp.routers.rustdesk-rd5.service=rustdesk-rd5
+      - traefik.tcp.services.rustdesk-rd5.loadbalancer.server.port=${RUSTDESK_ID_SERVER_NAT_PORT}
+      - traefik.tcp.routers.rustdesk-rd5.tls=false
+      - traefik.tcp.routers.rustdesk-rd5.tls.passthrough=true
+      # 21116/tcp # ID Server - TCP hole punching
+      - traefik.tcp.routers.rustdesk-rd6.entrypoints=rd6-tcp
+      - traefik.tcp.routers.rustdesk-rd6.rule=HostSNI(`*`)
+      - traefik.tcp.routers.rustdesk-rd6.service=rustdesk-rd6
+      - traefik.tcp.services.rustdesk-rd6.loadbalancer.server.port=${RUSTDESK_ID_SERVER_TCP_PORT}
+      - traefik.tcp.routers.rustdesk-rd6.tls=false
+      - traefik.tcp.routers.rustdesk-rd6.tls.passthrough=true
+      # 21117/tcp # Relay Server - Relay services
+      - traefik.tcp.routers.rustdesk-rd7.entrypoints=rd7-tcp
+      - traefik.tcp.routers.rustdesk-rd7.rule=HostSNI(`*`)
+      - traefik.tcp.routers.rustdesk-rd7.service=rustdesk-rd7
+      - traefik.tcp.services.rustdesk-rd7.loadbalancer.server.port=${RUSTDESK_RELAY_SERVER_PORT}
+      - traefik.tcp.routers.rustdesk-rd7.tls=false
+      - traefik.tcp.routers.rustdesk-rd7.tls.passthrough=true
+      # 21118/http # ID Server - Web client
+      - traefik.http.routers.rustdesk-rd8.rule=Host(`rustdesk.${DOMAINNAME}`) && PathPrefix(`/ws/id`)
+      - traefik.http.routers.rustdesk-rd8.entrypoints=websecure
+      - traefik.http.routers.rustdesk-rd8.service=rustdesk-rd8
+      - traefik.http.services.rustdesk-rd8.loadbalancer.server.port=${RUSTDESK_ID_WEB_PORT}
+      - traefik.http.routers.rustdesk-rd8.tls.certresolver=mydnschallenge
+      - traefik.http.routers.rustdesk-rd8.middlewares=rustdesk-headers
+      # 21119/http # Relay Server - Web client
+      - traefik.http.routers.rustdesk-rd9.rule=Host(`rustdesk.${DOMAINNAME}`) && PathPrefix(`/ws/relay`)
+      - traefik.http.routers.rustdesk-rd9.entrypoints=websecure
+      - traefik.http.routers.rustdesk-rd9.service=rustdesk-rd9
+      - traefik.http.services.rustdesk-rd9.loadbalancer.server.port=${RUSTDESK_RELAY_WEB_PORT}
+      - traefik.http.routers.rustdesk-rd9.tls.certresolver=mydnschallenge
+      - traefik.http.routers.rustdesk-rd9.middlewares=rustdesk-headers
+      # Headers configurations for rustdesk-rd8 and rustdesk-rd8
+      - traefik.http.middlewares.rustdesk-headers.headers.customRequestHeaders.X-Forwarded-Proto=https
+      - traefik.http.middlewares.rustdesk-headers.headers.customRequestHeaders.X-Real-IP=true
+      - traefik.http.middlewares.rustdesk-headers.headers.customRequestHeaders.Host=Host(`rustdesk.${DOMAINNAME}`)
