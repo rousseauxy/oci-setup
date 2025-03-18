@@ -7,11 +7,18 @@ services:
       - no-new-privileges:true
     restart: unless-stopped
     networks:
-      - t3_proxy
+      - default
     entrypoint: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD} --maxmemory 512mb --maxmemory-policy allkeys-lru
+    command: --save 60 1 --loglevel warning
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+      start_period: 20s
+      interval: 30s
+      retries: 5
+      timeout: 3s
     ports:
       - "6379:6379"
     volumes:
-      - ${DOCKERDIR}/appdata/redis/data:/data
+      - ${DOCKERDIR}/appdata/redis:/data
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro

@@ -6,6 +6,9 @@
 ##   1. Postgres + FerretDB Mongo adapter (https://www.ferretdb.com)
 ##   2. Komodo Core
 ##   3. Komodo Periphery
+networks:
+  komodo-internal:
+    internal: true
 
 services:
   postgres:
@@ -14,7 +17,7 @@ services:
     logging:
       driver: local
     networks:
-      - default
+      - komodo-internal
     # ports:
     #   - 5432:5432
     volumes:
@@ -34,7 +37,7 @@ services:
     logging:
       driver: local
     networks:
-      - default
+      - komodo-internal
     # ports:
     #   - 27017:27017
     environment:
@@ -46,6 +49,15 @@ services:
     image: ghcr.io/mbecker20/komodo:latest
     labels:
       komodo.skip: # Prevent Komodo from stopping with StopAllContainers
+      - "traefik.enable=true"
+      # HTTP Routers
+      - "traefik.http.routers.komodo-rtr.entrypoints=websecure"
+      - "traefik.http.routers.komodo-rtr.rule=Host(`komodo.${DOMAINNAME}`)"
+      # Middlewares
+      - "traefik.http.routers.komodo-rtr.middlewares=chain-no-auth@file"
+      # HTTP Services
+      - "traefik.http.routers.komodo-rtr.service=komodo-svc"
+      - "traefik.http.services.komodo-svc.loadbalancer.server.port=9120"
     restart: unless-stopped
     depends_on:
       - ferretdb
@@ -53,7 +65,7 @@ services:
       driver: local
     networks:
       - t3_proxy
-      - default
+      - komodo-internal
     # ports:
     #  - 9120:9120
     expose:
@@ -85,7 +97,7 @@ services:
       driver: ${COMPOSE_LOGGING_DRIVER:-local}
     networks:
       - t3_proxy
-      - default
+      - komodo-internal
     env_file: ${DOCKERDIR}/secrets/komodo.env
     environment:
       PERIPHERY_REPO_DIR: /etc/komodo/repos

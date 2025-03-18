@@ -22,7 +22,7 @@ services:
       - "traefik.http.routers.phpmyadmin-rtr.entrypoints=websecure"
       - "traefik.http.routers.phpmyadmin-rtr.rule=Host(`pma.${DOMAINNAME}`)"
       # Middlewares
-      - "traefik.http.routers.phpmyadmin-rtr.middlewares=chain-oauth@file"
+      - "traefik.http.routers.phpmyadmin-rtr.middlewares=forwardAuth-authentik@file"
       # HTTP Services
       - "traefik.http.routers.phpmyadmin-rtr.service=phpmyadmin-svc"
       - "traefik.http.services.phpmyadmin-svc.loadbalancer.server.port=80"

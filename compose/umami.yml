@@ -40,7 +40,7 @@ services:
       traefik.http.routers.umami.entrypoints: "websecure"
       # I have a compression middleware set up; otherwise the tracker script is not compressed.
       # See tip below for notes on setting up Traefik.
-      traefik.http.routers.umami.middlewares: "compress-gzip@file"
+      traefik.http.routers.umami.middlewares: "middlewares-compress@file"
     depends_on:
       db:
         condition: service_healthy

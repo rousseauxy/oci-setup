@@ -7,31 +7,34 @@ services:
     restart: unless-stopped
     networks:
       t3_proxy:
+        aliases:
+            - traefik.${DOMAINNAME}
         ipv4_address: 192.168.90.254 # You can specify a static IP
+        
     ports:
       - '80:80'
       - '443:443'
       - '8080:8080'
     volumes:
+      - ${DOCKERDIR}/appdata/traefik/config:/config # traefik.yaml
       - ${DOCKERDIR}/appdata/traefik/data:/etc/traefik
-      - /var/run/docker.sock:/var/run/docker.sock:ro
       - ${DOCKERDIR}/appdata/traefik/rules:/rules # Dynamic File Provider directory
       - ${DOCKERDIR}/appdata/traefik/acme/acme.json:/acme.json # Certs File 
       - ${DOCKERDIR}/logs/traefik:/logs # Traefik logs
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      
     environment:
       - TZ=${TZ}
 
     labels:
-      #- "autoheal=true"
       - "traefik.enable=true"
-      # HTTP Routers
-      - "traefik.http.routers.traefik-rtr.entrypoints=websecure"
-      - "traefik.http.routers.traefik-rtr.rule=Host(`traefik.${DOMAINNAME}`)"
-      # Services - API
+      ## HTTP Routers
+      - "traefik.http.routers.traefik-rtr.rule=Host(`traefik.${DOMAINNAME}`) || Host(`traefik.traefik`)"
+      - "traefik.http.routers.traefik-rtr.entrypoints=websecure"  # Defined in traefik.yaml
+      #### Migrate individual service cert resolver to global resolution in traefik.yaml
+      #- "traefik.http.routers.traefik-rtr.tls=true"
+      #- "traefik.http.routers.traefik-rtr.tls.certresolver=le"
+      #- "traefik.http.routers.traefik-rtr.tls.domains[0].main=$DOMAINNAME"
+      #- "traefik.http.routers.traefik-rtr.tls.domains[0].sans=*.$DOMAINNAME"
+      ## Services - API
       - "traefik.http.routers.traefik-rtr.service=api@internal"
-      # Healthcheck/ping
-      #- "traefik.http.routers.ping.rule=Host(`traefik.$DOMAINNAME`) && Path(`/ping`)"
-      #- "traefik.http.routers.ping.tls=true"
-      #- "traefik.http.routers.ping.service=ping@internal"
-      # Middlewares
-      - "traefik.http.routers.traefik-rtr.middlewares=chain-authelia@file" # For Authelia Authentication

@@ -32,7 +32,7 @@ entryPoints:
       tls:
         certResolver: letsencrypt
     forwardedHeaders:
-      trustedIPs: ${CLOUDFLARE_IPS},${LOCAL_IPS}
+      trustedIPs: ${CLOUDFLARE_IPS},${LOCAL_IPS},${GRPGENT_IPS}
 
   traefik:
     address: :8080

@@ -22,7 +22,7 @@ services:
       - "traefik.http.routers.dockge-rtr.entrypoints=websecure"
       - "traefik.http.routers.dockge-rtr.rule=Host(`dockge.${DOMAINNAME}`)"
       # Middlewares
-      - "traefik.http.routers.dockge-rtr.middlewares=chain-oauth@file"
+      - "traefik.http.routers.dockge-rtr.middlewares=forwardAuth-authentik@file"
       # HTTP Services
       - "traefik.http.routers.dockge-rtr.service=dockge-svc"
       - "traefik.http.services.dockge-svc.loadbalancer.server.port=5001"

@@ -1,6 +1,6 @@
-########################### ANAND'S ENVIRONMENT
+########################### XACT'S ENVIRONMENT
 # Here are my 2 Docker Hosts:
-# - Home Server (nas) - Intel NUC with Unraid OS 7.0.1
+# - Home Server (nuc) - Intel NUC with Unraid OS 7.0.1
 # - Web Server (oci) - Oracle Cloud Instance with Ubuntu 24.04
 
 ########################### THIS COMPOSE FILE
@@ -9,8 +9,9 @@
 # - Docker version 24.0.7, build afdd53b
 # - Docker Compose version v2.21.0
 
-########################### NETWORKS
-# You may customize the network subnets (192.168.x.0/24) below as you please.
+###############################################################
+# Networks
+###############################################################
 networks:
   default:
     driver: bridge
@@ -27,95 +28,96 @@ networks:
       config:
         - subnet: 192.168.90.0/24
 
-########################### SECRETS
+###############################################################
+# Docker Secrets
+# Owner (default): root:root
+# Recommend Set Owner to match container user Example: UID=1100, GID=1100
+# Permissions of files & directory on host to: 0400 (-r--)
+###############################################################
 secrets:
-  basic_auth_credentials:
-    file: $DOCKERDIR/secrets/basic_auth_credentials
-  cf_dns_api_token:
-    file: $DOCKERDIR/secrets/cf_dns_api_token
+  ## Cloudflare / Traefik
+  default_username:
+    file: ${DOCKERDIR}/secrets/default_username
+  cf_email:
+    file: ${DOCKERDIR}/secrets/cf_email
   traefik_forward_auth:
     file: $DOCKERDIR/secrets/traefik_forward_auth
+  # cf_api_key:
+  #   file: ${DOCKERDIR}/secrets/cf_api_key
+  cf_dns_api_token:
+    file: ${DOCKERDIR}/secrets/cf_dns_api_token
+  cf_dns_api_token:
+    file: $DOCKERDIR/secrets/cf_dns_api_token
+  ## Databases
+  postgres_default_password:
+    file: $DOCKERDIR/secrets/postgres_default_password
   mysql_root_password:
     file: $DOCKERDIR/secrets/mysql_root_password
-  authelia_jwt_secret:
-    file: $DOCKERDIR/secrets/authelia_jwt_secret
-  authelia_session_secret:
-    file: $DOCKERDIR/secrets/authelia_session_secret
-  # authelia_storage_mysql_password:
-  #   file: $DOCKERDIR/secrets/authelia_storage_mysql_password
-  # authelia_notifier_smtp_password:
-  #   file: $DOCKERDIR/secrets/authelia_notifier_smtp_password
-  # authelia_duo_api_secret_key:
-  #   file: $DOCKERDIR/secrets/authelia_duo_api_secret_key
-  authelia_storage_encryption_key:
-    file: $DOCKERDIR/secrets/authelia_storage_encryption_key
+  ## Authentik
+  authentik_postgresql_db:
+    file: ${DOCKERDIR}/secrets/authentik_postgresql_db
+  authentik_postgresql_user:
+    file: ${DOCKERDIR}/secrets/authentik_postgresql_user
+  authentik_postgresql_password:
+    file: ${DOCKERDIR}/secrets/authentik_postgresql_password
+  authentik_secret_key:
+    file: ${DOCKERDIR}/secrets/authentik_secret_key
+  gmail_smtp_username:
+    file: ${DOCKERDIR}/secrets/gmail_smtp_username
+  gmail_smtp_password:
+    file: ${DOCKERDIR}/secrets/gmail_smtp_password
+  ## Rustdesk
+  rustdesk_private_key:
+    file: ${DOCKERDIR}/secrets/rustdesk_private_key
+  rustdesk_public_key:
+    file: ${DOCKERDIR}/secrets/rustdesk_public_key
+  ## Headplane
+  headplane_cookie_secret:
+    file: ${DOCKERDIR}/secrets/headplane_cookie_secret
+  ## Komodo
+  komodo_db_username:
+    file: ${DOCKERDIR}/secrets/komodo_db_username
+  komodo_db_password:
+    file: ${DOCKERDIR}/secrets/komodo_db_password
+  komodo_passkey:
+    file: ${DOCKERDIR}/secrets/komodo_passkey
 
+###############################################################
+# Include
+# Merge all of the below compose files into one large compose at run time
+# Thanks to Anand (SmartHomeBeginner), this is clean!
+###############################################################
 include:
-  ########################### SERVICES
-  # PREFIX oci = VPS on Oracle Cloud Infrastructure
-  # HOSTNAME=oci - defined in .env
 
   # CORE
-  - compose/$HOSTNAME/traefik.yml
-  - compose/$HOSTNAME/socket-proxy.yml
-  - compose/$HOSTNAME/oauth.yml
-  - compose/$HOSTNAME/authelia.yml
-  - compose/$HOSTNAME/portainer.yml
-  - compose/$HOSTNAME/dockge.yml
+  - compose/traefik.yml
+  - compose/authentik.yml
+  - compose/komodo.yml
   # SECURITY
-  - compose/$HOSTNAME/crowdsec.yml
-  - compose/$HOSTNAME/traefik-bouncer.yml
+  # - compose/crowdsec.yml
+  # - compose/traefik-bouncer.yml
   # FRONTEND
-  # - compose/$HOSTNAME/autoindex.yml
-  # - compose/$HOSTNAME/homepage.yml
-  - compose/$HOSTNAME/phpmyadmin.yml
-  # - compose/$HOSTNAME/sitespeed.yml
-  - compose/$HOSTNAME/whoami.yml
+  # - compose/phpmyadmin.yml
+  - compose/whoami.yml
   # https://aaronjbecker.com/posts/self-hosted-analytics-umami-docker-compose-traefik/
-  - compose/$HOSTNAME/umami.yml
-  - compose/$HOSTNAME/vaultwarden.yml
+  - compose/umami.yml
+  - compose/vaultwarden.yml
+  # GAME SERVERS
+  - compose/minecraft.yml
   # DOWNLOADERS
-  # - compose/$HOSTNAME/jdownloader.yml
-  # - compose/$HOSTNAME/qbittorrent.yml
-  # - compose/$HOSTNAME/sabnzbd.yml
-  # PVRS
-  # - compose/$HOSTNAME/sonarr.yml
-  # - compose/$HOSTNAME/radarr.yml
-  # - compose/$HOSTNAME/lidarr.yml
-  # COMPLEMENTARY APPS
-  # - compose/$HOSTNAME/prowlarr.yml
-  # - compose/$HOSTNAME/notifiarr.yml
-  # - compose/$HOSTNAME/bazarr.yml
-  # - compose/$HOSTNAME/picard.yml
+  # - compose/jdownloader.yml
   # MONITORING
-  # - compose/$HOSTNAME/grafana.yml
-  - compose/$HOSTNAME/uptime-kuma.yml
-  - compose/$HOSTNAME/dozzle.yml
-  # - compose/$HOSTNAME/scrutiny.yml
-  # - compose/$HOSTNAME/radarr-exporter.yml
-  # - compose/$HOSTNAME/sonarr-exporter.yml
-  # - compose/$HOSTNAME/lidarr-exporter.yml
-  # - compose/$HOSTNAME/prowlarr-exporter.yml
-  # - compose/$HOSTNAME/sabnzbd-exporter.yml
-  # - compose/$HOSTNAME/node-exporter.yml
+  - compose/uptime-kuma.yml
+  - compose/dozzle.yml
   # ADMIN
-  # - compose/$HOSTNAME/guacamole.yml
-  # - compose/$HOSTNAME/kasm.yml
-  - compose/$HOSTNAME/rundeck-server.yml
-  - compose/$HOSTNAME/it-tools.yml
+  - compose/rundeck-server.yml
+  
   # UTILITIES
-  # - compose/$HOSTNAME/firefox.yml
-  # - compose/$HOSTNAME/firefly.yml
+  - compose/it-tools.yml
   # FILE MANAGEMENT
-  - compose/$HOSTNAME/vscode.yml
-  # - compose/$HOSTNAME/makemkv.yml
-  # - compose/$HOSTNAME/mkvtoolnix.yml
+  - compose/vscode.yml
   # NETWORK
   # headscale setup:
   # https://timharek.no/blog/i-switched-from-wireguard-to-headscale/
   # https://blog.flaskforge.com/Docker/headscale
-  - compose/$HOSTNAME/headscale.yml
-  # - compose/$HOSTNAME/gluetun.yml
-  # MAINTENANCE
-  # - compose/$HOSTNAME/docker-gc.yml
-  - compose/$HOSTNAME/deunhealth.yml
+  - compose/headscale.yml

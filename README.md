@@ -87,10 +87,10 @@ sudo apt-get install \
 Then we can go ahead and install the Docker application
 
 ```
-sudo apt-get update
-sudo apt-get install docker-ce docker-ce-cli containerd.io docker-compose-plugin
-And we can add our current user to the docker group to save us needing to run as sudo each time we want to run a Docker command.
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
 ```
+And we can add our current user to the docker group to save us needing to run as sudo each time we want to run a Docker command.
 
 ```
 sudo usermod -aG docker $USER

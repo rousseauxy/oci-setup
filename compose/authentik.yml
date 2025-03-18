@@ -1,0 +1,140 @@
+networks:
+  authentik-internal:
+    internal: true
+
+services:
+  # Redis - Key-value Store
+  authentik_redis:
+    image: docker.io/library/redis:alpine
+    container_name: authentik_redis
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    command: --save 60 1 --loglevel warning
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+      start_period: 20s
+      interval: 30s
+      retries: 5
+      timeout: 3s
+    networks:
+      - authentik-internal
+    ports:
+      - "$REDIS_PORT:6379"
+    volumes:
+      - $DOCKERDIR/appdata/authentik/redis:/data
+
+  # PostgreSQL - Database
+  authentik_postgresql:
+    container_name: authentik_postgresql
+    image: postgres:16-alpine
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d postgres -U $${POSTGRES_USER}"]
+      start_period: 20s
+      interval: 30s
+      retries: 5
+      timeout: 5s
+    networks:
+      - authentik-internal
+    ports:
+      - "$POSTGRESQL_PORT:5432"
+    volumes:
+      - $DOCKERDIR/appdata/authentik/postgresql:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=$POSTGRES_USER
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_default_password
+    secrets:
+      - postgres_default_password
+
+  authentik_server:
+    image: ghcr.io/goauthentik/server:2024.12.0
+    container_name: authentik_server
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    networks:
+      - authentik-internal
+      - t3_proxy
+    ports:
+      - "9000:9000"
+      # - "9443:9443" # HTTPS
+    command: server
+    user: ${PUID}:${PGID}
+    depends_on:
+      authentik_postgresql:
+        condition: service_healthy
+      authentik_redis:
+        condition: service_healthy
+    environment:
+      - AUTHENTIK_REDIS__HOST
+      - AUTHENTIK_POSTGRESQL__HOST
+      - AUTHENTIK_POSTGRESQL__NAME
+      - AUTHENTIK_POSTGRESQL__USER
+      - AUTHENTIK_POSTGRESQL__PASSWORD
+      - AUTHENTIK_SECRET_KEY
+      - AUTHENTIK_LOG_LEVEL=info # debug, info, warning, error, trace
+      - AUTHENTIK_DISABLE_STARTUP_ANALYTICS=true
+      - AUTHENTIK_DISABLE_UPDATE_CHECK=false
+      - AUTHENTIK_ERROR_REPORTING__ENABLED=false
+    secrets:
+      - authentik_postgresql_user
+      - authentik_postgresql_password
+      - authentik_secret_key
+    volumes:
+      - $DOCKERDIR/appdata/authentik/media:/media
+      - $DOCKERDIR/appdata/authentik/custom-templates:/templates
+      # - $DOCKERDIR/appdata/authentik/geoip/data:/geoip # requires geoipupdate
+    labels:
+      - "traefik.enable=true"
+      # HTTP Routers
+      - "traefik.http.routers.authentik-rtr.entrypoints=websecure"
+      - "traefik.http.routers.authentik-rtr.rule=Host(`authentik.$DOMAINNAME_1`)"
+      # Middlewares
+      - "traefik.http.routers.authentik-rtr.middlewares=chain-no-auth@file"
+      # Catch any subdomain using individual application forward authentication
+      - "traefik.http.routers.authentik-output-rtr.rule=HostRegexp(`{subdomain:[a-z0-9-]+}.${DOMAINNAME_1}`) && PathPrefix(`/outpost.goauthentik.io/`)"
+      # HTTP Services
+      - "traefik.http.routers.authentik-rtr.service=authentik-svc"
+      - "traefik.http.services.authentik-svc.loadbalancer.server.port=9000"
+    
+  authentik_worker:
+    image: ghcr.io/goauthentik/server:2024.12.0
+    container_name: authentik_worker
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    networks:
+      - authentik-internal
+      - t3_proxy
+    command: worker
+    user: ${PUID}:${PGID}
+    depends_on:
+      authentik_postgresql:
+        condition: service_healthy
+      authentik_redis:
+        condition: service_healthy
+    environment:
+      - DOCKER_HOST
+      - AUTHENTIK_REDIS__HOST
+      - AUTHENTIK_POSTGRESQL__HOST
+      - AUTHENTIK_POSTGRESQL__NAME
+      - AUTHENTIK_POSTGRESQL__USER
+      - AUTHENTIK_POSTGRESQL__PASSWORD
+      - AUTHENTIK_SECRET_KEY
+      - AUTHENTIK_LOG_LEVEL=info # debug, info, warning, error, trace
+      - AUTHENTIK_DISABLE_STARTUP_ANALYTICS=true
+      - AUTHENTIK_DISABLE_UPDATE_CHECK=false
+      - AUTHENTIK_ERROR_REPORTING__ENABLED=false
+    secrets:
+      - authentik_postgresql_user
+      - authentik_postgresql_password
+      - authentik_secret_key
+    volumes:
+      - $DOCKERDIR/appdata/authentik/media:/media
+      - $DOCKERDIR/appdata/authentik/custom-templates:/templates
+      # - $DOCKERDIR/appdata/authentik/geoip/data:/geoip # requires geoipupdate
+      - /var/run/docker.sock:/var/run/docker.sock # Uncomment if NOT using socket-proxy
+      # - $DOCKERDIR/appdata/traefik3/cert_export:/certs:ro # If NOT using reverse proxy, manually map in certificates
