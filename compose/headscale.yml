@@ -37,7 +37,7 @@ services:
 
   headplane:
     container_name: headplane
-    image: ghcr.io/tale/headplane:v0.5.3
+    image: ghcr.io/tale/headplane:latest
     restart: unless-stopped
     networks:
       - t3_proxy

@@ -7,7 +7,7 @@
 # - Web Server (oci) - Oracle Cloud Instance with Ubuntu 24.04
 # - Prefix/suffix "oci" refers to the above host
 # - Docker version 24.0.7, build afdd53b
-# - Docker Compose version v2.21.0
+# - Docker Compose version v2.33.1
 
 ###############################################################
 # Networks

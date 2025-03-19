@@ -102,3 +102,10 @@ We should now close our session and log back in to allow the changes to take eff
 Every service has been split up into seperate yml-files, with one main docker-compose-master.yml to include all configs.
 
 First we need to create the folders to hold all the data for the containers, compose files and secrets.
+
+Then we create the environment file and secrets
+
+And lastly we spin up the docker compose
+```
+/home/ubuntu# docker compose -f /mnt/docker/docker-compose-oci.yml --env-file /mnt/docker/secrets/oci.env up
+```
